@@ -47,7 +47,7 @@ library("dplyr")
 ```{r further_options, include = FALSE}
 
 install.packages(c("cowplot", "googleway", "ggplot2", "ggrepel",  "dplyr", 
-    "ggspatial", "lwgeom", "rnaturalearth", "sf", "rnaturalearthdata", "viridis", "maps","tidyverse"))
+    "ggspatial", "lwgeom", "rnaturalearth", "sf", "rnaturalearthdata", "viridis", "maps","tidyverse", "egg"))
 
 ```
 
@@ -65,6 +65,7 @@ library(dplyr)    # To assist with cleaning and organizing data
 library(tidyverse)  
 library(maps)  
 library(tools)
+library(egg)
 
 ```
 
@@ -130,7 +131,6 @@ SwissAsianRepresentations <- SwissAsianMissionsData
 SwissDAInAPac <- SwissAsianMissionsData %>%
   filter(AD_accrédité == "VRAI")
 
-
 MapCountriesWithSwissEmbassy <- world %>%
   select(geometry, name, "iso_a3_eh") %>%
   left_join(SwissAsianEmbassies, by = "iso_a3_eh") %>%
@@ -156,7 +156,7 @@ CityDB <- read_excel("worldcities-2024-06-06.xlsx") %>%
 
 CityDB$city_ascii <- str_replace(CityDB$city_ascii, "Rangoon", "Yangon")
 
-CityDB$ISO_country <- CityDB$iso_a3_eh
+CityDB$ISO_country <- CityDB$iso_a3_eh 
 
 # Create a SwissAsianMissionsLocations by selecting the city  ------------------
 # from SwissAsianMissionsData and joining the dataset with the cityDB
@@ -217,23 +217,32 @@ window_coord_sf <- window_coord %>%
 
 # Missions Locations -----------------------------------------------------------
 
-ValueEmbassies <- DisplayMap (world, target_crs, window_coord_sf, MapCountriesWithSwissEmbassy, SwissAsianMissionsLocationsGeo, 'Pays_Ambassade',"Asia Pacific", "Swiss Embassies", "BCN" )
+ValueEmbassies <- DisplayMap (world, target_crs, window_coord_sf, MapCountriesWithSwissEmbassy, SwissAsianMissionsLocationsGeo,
+                              MapCountriesWithSwissEmbassy$Pays_Ambassade,"Asia Pacific", "Swiss Embassies", "BCN" )
 
-ValueEmbassies
+
 
 # Diplomatic accreditations ----------------------------------------------------
 
-ValueRepresentations <- DisplayMap (world, target_crs, window_coord_sf, MapCountriesWithSwissRepresentation,Pays_Ambassade,  SwissAsianMissionsLocationsGeo, "Asia Pacific", "Swiss Embassies", "BCN" )
+ValueRepresentations <- DisplayMap (world, target_crs, window_coord_sf, MapCountriesWithSwissRepresentation,
+                                    SwissAsianMissionsLocationsGeo, MapCountriesWithSwissRepresentation$Pays_Ambassade,
+                                    "Asia Pacific","Swiss Representations", "BCN" )
 
-ValueRepresentations
+
 
 # DA accreditations ------------------------------------------------------------
 
 cols <- c("none" = "grey", "TRUE" = "darkblue", "FALSE" = "lightblue")
 
-ValueDA <- DisplayMap (world, target_crs, window_coord_sf, MapCountriesWithSwissDA, SwissAsianDALocationsGeo, AD_origine, "Asia Pacific", "Swiss DA and Accreditated States", "BCN" )
-
+ValueDA <- DisplayMap (world, target_crs, window_coord_sf, MapCountriesWithSwissDA, SwissAsianDALocationsGeo, 
+                       MapCountriesWithSwissDA$AD_origine, "Asia Pacific", "Swiss DA and Accreditated States", "BCN" )
+ValueEmbassies
+ValueRepresentations
 ValueDA
+
+grid.arrange (ValueEmbassies, ValueRepresentations, ValueDA, nrow = 2)
+
+
 ```
 
 
