@@ -42,6 +42,10 @@ library("rnaturalearthdata")
 library("readxl")
 library("dplyr")
 
+```
+
+```{r further_options, include = FALSE}
+
 install.packages(c("cowplot", "googleway", "ggplot2", "ggrepel",  "dplyr", 
     "ggspatial", "lwgeom", "rnaturalearth", "sf", "rnaturalearthdata"))
 
@@ -57,7 +61,7 @@ library(dplyr)    # To assist with cleaning and organizing data
 
 ```
 
-```{r}
+```{r SetupData}
 
 # Get World Map Data ---------------------------------------------------
 
