@@ -70,7 +70,9 @@ library(tidyverse)
 
 world <- ne_countries(scale = "medium", returnclass = "sf")
 
-target_crs <- "+proj=gall"
+# target_crs <- "+proj=gall"
+
+target_crs <- 4326
 
 # Read and Join Swiss Missions Data --------------------------------------------
 
@@ -101,18 +103,17 @@ CityDB$city_ascii <- str_replace(CityDB$city_ascii, "Rangoon", "Yangon")
 
 SwissAsianMissionsCities <- SwissAsianMissionsData %>%
   select('city_ascii', 'iso_a3_eh', 'APacRegion') %>%
-  filter(city_ascii != "NA") %>%
-  filter(city_ascii == "Tokyo")
+  filter(city_ascii != "NA") 
 
 # Join data sets
 
 SwissAsianMissionsLocations <- CityDB %>%
-  select('city_ascii', 'lng', 'lat') %>%
+  select('city_ascii', 'lat', 'lng') %>%
   right_join(SwissAsianMissionsCities, by = 'city_ascii')
 
 # Cordinates for the city
 SwissAsianMissionsLocationsGeo <- st_as_sf(SwissAsianMissionsLocations, coords = c("lng", "lat"), remove = FALSE,
-    crs = 4326, agr = "constant")
+    crs = target_crs, agr = "constant")
 
 ```
 
@@ -129,7 +130,7 @@ library("ggrepel")
 window_coord <- st_sfc(
   st_point(c(60, -10)), #left, bottom
   st_point(c(149, 55)), #right, top
-  crs = 4326 #the EPSG identifier of WGS84 (used in GPS)
+  crs = target_crs #the EPSG identifier of WGS84 (used in GPS)
 )
 
 window_coord_sf <- window_coord %>%
@@ -146,8 +147,8 @@ world %>%
   geom_sf(data = MapCountriesWithSwissEmbassy, aes(fill = APacRegion), color="white") +
   geom_sf(data = SwissAsianMissionsLocationsGeo, color="Black") +
   geom_text_repel(data = SwissAsianMissionsLocationsGeo, aes(x = lng, y = lat, label = city_ascii), 
-        fontface = "bold", nudge_x = c(1, -1.5, 2, 2, -1), nudge_y = c(0.25, 
-            -0.25, 0.5, 0.5, -0.5)) +
+       fontface = "bold", nudge_x = c(1, -1.5, 2, 2, -1), nudge_y = c(0.25, 
+        -0.25, 0.5, 0.5, -0.5)) +
   coord_sf(
   xlim = window_coord_sf[, "X"],
   ylim = window_coord_sf[, "Y"],
@@ -160,7 +161,9 @@ world %>%
        subtitle = "Swiss Representations",
        x = NULL, y = NULL,
        caption = "BCN")
+
 ```
+
  +
 #  coord_sf(
 #    xlim = window_coord_sf[, "X"],
@@ -175,7 +178,7 @@ world %>%
        x = NULL, y = NULL,
        caption = "BCN")
 
-```{r layers-final-plot1,  fig.width = 15, out.width = "75%"}
+```{r layers-final-plot1,  fig.width = 15, out.width = "100%"}
 library("ggrepel")
 
 cols <- c("none" = "grey", "TRUE" = "darkblue", "FALSE" = "lightblue")
@@ -189,11 +192,11 @@ world %>%
   geom_text_repel(data = SwissAsianMissionsLocationsGeo, aes(x = lng, y = lat, label = city_ascii), 
         fontface = "bold", nudge_x = c(1, -1.5, 2, 2, -1), nudge_y = c(0.25, 
             -0.25, 0.5, 0.5, -0.5)) +
-#  coord_sf(
-#    xlim = window_coord_sf[, "X"],
-#    ylim = window_coord_sf[, "Y"],
-#    expand = FALSE
-#  ) +
+  coord_sf(
+    xlim = window_coord_sf[, "X"],
+    ylim = window_coord_sf[, "Y"],
+    expand = FALSE
+  ) +
   theme_minimal() +
   theme(plot.title = element_text(face = "bold"),
         axis.text.x = element_blank()) +
