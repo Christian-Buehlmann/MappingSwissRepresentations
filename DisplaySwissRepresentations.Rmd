@@ -230,10 +230,6 @@ CityDB$ISO_country <- CityDB$iso_a3_eh
 # Create a Subset of the SwissAsianMissionsData with the locations
 
 SwissAsianDACities <- SwissAsianMissionsData %>%
-  select('city_ascii', 'iso_a3_eh', 'APacRegion', 'Pays_Ambassade')
-
-
-SwissAsianDACities <- SwissAsianMissionsData %>%
   select('city_ascii', 'iso_a3_eh', 'APacRegion', 'Pays_Ambassade', 'AD_origine', 'AD_inland') %>%
   filter(city_ascii != "NA")  %>%
   filter(AD_inland == "VRAI") 
@@ -349,6 +345,9 @@ world %>%
 MapCountriesWithSwissDA <- cbind(MapCountriesWithSwissDA, st_coordinates(st_centroid(MapCountriesWithSwissDA)))
 
 cols <- c("none" = "grey", "TRUE" = "darkblue", "FALSE" = "lightblue")
+
+
+
 world %>%
   filter(admin != "Antarctica") %>%
   st_transform(crs = target_crs) %>%
@@ -376,4 +375,116 @@ world %>%
        x = NULL, y = NULL,
        caption = "BCN")
 
+DisplayMap <- function(world, target_crs, window_coord_sf, StatesGeometry, CitiesGeometry, FillClass, MapTitle, MapSubtitle, MapCaption ) {
+DisplayMapReturnValue <- world %>%
+  filter(admin != "Antarctica") %>%
+  st_transform(crs = target_crs) %>%
+  ggplot() +
+  geom_sf(color = "white") +
+  geom_sf(data = StatesGeometry, aes(fill = FillClass), color ="white") +
+  # geom_label(data = MapCountriesWithSwissDA, aes(X, Y, label = ID), size = 5, fontface = "bold", 
+  #      nudge_y = MapCountriesWithSwissDA$nudge_y) +
+  geom_text(data = StatesGeometry, aes(X, Y, label = name.x), size = 2, fontface = "italic") +
+  geom_sf(data = CitiesGeometry, shape=18, color="Black", size = 2, fontface = "bold",) +
+  geom_label_repel(data = CitiesGeometry, size=2,
+      aes(x = lng, y = lat, label = city_ascii), 
+       fontface = "plain", nudge_x = 3, nudge_y = 3) +
+  coord_sf(
+  xlim = window_coord_sf[, "X"],
+  ylim = window_coord_sf[, "Y"],
+  expand = FALSE,
+  datum=NA
+  ) +
+  theme_minimal() +
+  theme(plot.title = element_text(face = "bold"),
+        axis.text.x = element_blank()) +
+  labs(title = MapTitle,
+       subtitle = MapSubtitle,
+       x = NULL, y = NULL,
+       caption = MapCaption)
+  
+  
+    return(DisplayMapReturnValue)
+}
+
+Value <- DisplayMap (world, target_crs, window_coord_sf, MapCountriesWithSwissDA, SwissAsianDALocationsGeo, APac_Region. "Asia Pacific", "Swiss DA and Accreditated States", "BCN" )
+
+Value
+
 ```
+
+```{r layers-final-plot2 fig.width = 15, out.width = "75%"}
+
+library("ggrepel")
+
+# Déclaration de la procédure --------------------------------------------------
+# DisplayMap
+
+DisplayMap <- function(world, target_crs, window_coord_sf, StatesGeometry, CitiesGeometry, FillClass, MapTitle, MapSubtitle, MapCaption ) {
+
+StatesGeometry <- cbind(StatesGeometry, st_coordinates(st_centroid(StatesGeometry)))
+
+DisplayMapReturnValue <- world %>%
+  filter(admin != "Antarctica") %>%
+  st_transform(crs = target_crs) %>%
+  ggplot() +
+  geom_sf(color = "white") +
+  geom_sf(data = StatesGeometry, aes(fill = FillClass), color ="white") +
+  geom_text(data = StatesGeometry, aes(X, Y, label = name.x), size = 2, fontface = "italic") +
+  geom_sf(data = CitiesGeometry, shape=18, color="Black", size = 2, fontface = "bold",) +
+  geom_label_repel(data = CitiesGeometry, size=2,
+      aes(x = lng, y = lat, label = city_ascii), 
+       fontface = "plain", nudge_x = 3, nudge_y = 3) +
+  coord_sf(
+  xlim = window_coord_sf[, "X"],
+  ylim = window_coord_sf[, "Y"],
+  expand = FALSE,
+  datum=NA
+  ) +
+  theme_minimal() +
+  theme(plot.title = element_text(face = "bold"),
+        axis.text.x = element_blank()) +
+  labs(title = MapTitle,
+       subtitle = MapSubtitle,
+       x = NULL, y = NULL,
+       caption = MapCaption)
+  
+  
+    return(DisplayMapReturnValue)
+}
+
+## ----Create bounding box-------------------------
+# Choose manually the region to plot with Open Street Map
+# https://www.openstreetmap.org/export
+window_coord <- st_sfc(
+  st_point(c(60, -10)), #left, bottom
+  st_point(c(149, 55)), #right, top
+  crs = target_crs #the EPSG identifier of WGS84 (used in GPS)
+)
+
+window_coord_sf <- window_coord %>%
+  st_transform(crs = target_crs) %>%
+  st_coordinates() # retrieve coordinates
+
+# Missions Locations -----------------------------------------------------------
+
+ValueEmbassies <- DisplayMap (world, target_crs, window_coord_sf, MapCountriesWithSwissEmbassy, SwissAsianMissionsLocationsGeo, MapCountriesWithSwissEmbassy[[ys_Ambassade]],"Asia Pacific", "Swiss Embassies", "BCN" )
+
+ValueEmbassies
+
+# Diplomatic accreditations ----------------------------------------------------
+
+ValueRepresentations <- DisplayMap (world, target_crs, window_coord_sf, MapCountriesWithSwissRepresentation,Pays_Ambassade,  SwissAsianMissionsLocationsGeo, "Asia Pacific", "Swiss Embassies", "BCN" )
+
+ValueRepresentations
+
+# DA accreditations ------------------------------------------------------------
+
+cols <- c("none" = "grey", "TRUE" = "darkblue", "FALSE" = "lightblue")
+
+ValueDA <- DisplayMap (world, target_crs, window_coord_sf, MapCountriesWithSwissDA, SwissAsianDALocationsGeo, AD_origine, "Asia Pacific", "Swiss DA and Accreditated States", "BCN" )
+
+ValueDA
+```
+
+
