@@ -178,7 +178,7 @@ world %>%
        x = NULL, y = NULL,
        caption = "BCN")
 
-```{r layers-final-plot1,  fig.width = 15, out.width = "100%"}
+```{r layers-final-plot1,  fig.width = 9, out.width = "75%"}
 library("ggrepel")
 
 cols <- c("none" = "grey", "TRUE" = "darkblue", "FALSE" = "lightblue")
@@ -195,7 +195,8 @@ world %>%
   coord_sf(
     xlim = window_coord_sf[, "X"],
     ylim = window_coord_sf[, "Y"],
-    expand = FALSE
+    expand = FALSE,
+    datum = NA # no graticule
   ) +
   theme_minimal() +
   theme(plot.title = element_text(face = "bold"),
