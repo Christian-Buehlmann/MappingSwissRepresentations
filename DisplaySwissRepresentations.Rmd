@@ -49,6 +49,8 @@ library("dplyr")
 install.packages(c("cowplot", "googleway", "ggplot2", "ggrepel",  "dplyr", 
     "ggspatial", "lwgeom", "rnaturalearth", "sf", "rnaturalearthdata"))
 
+install.packages("tidyverse")
+
 library("ggplot2")
 theme_set(theme_bw())
 library("sf")
@@ -58,6 +60,7 @@ library("rnaturalearthdata")
 
 library(readxl)
 library(dplyr)    # To assist with cleaning and organizing data
+library(tidyverse)  
 
 ```
 
@@ -108,7 +111,7 @@ SwissAsianMissionsLocations <- CityDB %>%
 
 ```
 
-A better, more flexible alternative is to use the power of `sf`: Converting the data frame to a `sf` object allows to rely on `sf` to handle on the fly the coordinate system (both projection and extent), which can be very useful if the two objects (here world map, and sites) are not in the same projection. 
+Converting the data frame to a `sf` object allows to rely on `sf` to handle on the fly the coordinate system (both projection and extent), which can be very useful if the two objects (here world map, and sites) are not in the same projection. 
 
 To achieve the same result, the projection (here WGS84, which is the CRS code #4326) has to be a priori defined in the `sf` object:
 
