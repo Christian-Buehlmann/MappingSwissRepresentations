@@ -101,7 +101,8 @@ CityDB$city_ascii <- str_replace(CityDB$city_ascii, "Rangoon", "Yangon")
 
 SwissAsianMissionsCities <- SwissAsianMissionsData %>%
   select('city_ascii', 'iso_a3_eh', 'APacRegion') %>%
-  filter(city_ascii != "NA")
+  filter(city_ascii != "NA") %>%
+  filter(city_ascii == "Tokyo")
 
 # Join data sets
 
@@ -109,18 +110,32 @@ SwissAsianMissionsLocations <- CityDB %>%
   select('city_ascii', 'lng', 'lat') %>%
   right_join(SwissAsianMissionsCities, by = 'city_ascii')
 
+# Cordinates for the city
+SwissAsianMissionsLocationsGeo <- st_as_sf(SwissAsianMissionsLocations, coords = c("lng", "lat"), remove = FALSE,
+    crs = 4326, agr = "constant")
+
 ```
 
 Converting the data frame to a `sf` object allows to rely on `sf` to handle on the fly the coordinate system (both projection and extent), which can be very useful if the two objects (here world map, and sites) are not in the same projection. 
 
 To achieve the same result, the projection (here WGS84, which is the CRS code #4326) has to be a priori defined in the `sf` object:
 
-```{r SwissAsianMissionsLocations-sf-create}
-(SwissAsianMissionsLocationsGeo <- st_as_sf(SwissAsianMissionsLocations, coords = c("lng", "lat"), remove = FALSE,
-    crs = 4326, agr = "constant"))
-```
 ```{r layers-final-plot0 fig.width = 15, out.width = "75%"}
 library("ggrepel")
+
+## ----Create bounding box-------------------------
+# Choose manually the region to plot with Open Street Map
+# https://www.openstreetmap.org/export
+window_coord <- st_sfc(
+  st_point(c(60, -10)), #left, bottom
+  st_point(c(149, 55)), #right, top
+  crs = 4326 #the EPSG identifier of WGS84 (used in GPS)
+)
+
+window_coord_sf <- window_coord %>%
+  st_transform(crs = target_crs) %>%
+  st_coordinates() # retrieve coordinates
+
 
 cols <- c("none" = "grey", "TRUE" = "darkblue", "FALSE" = "lightblue")
 world %>%
@@ -129,14 +144,22 @@ world %>%
   ggplot() +
   geom_sf(color = "white") +
   geom_sf(data = MapCountriesWithSwissEmbassy, aes(fill = APacRegion), color="white") +
-  geom_sf(data = SwissAsianMissionsLocationsGeo) +
-  geom_text(data = SwissAsianMissionsLocationsGeo, aes(x = lng, y = lat, label = city_ascii), 
-        size = 3.9, col = "black", fontface = "bold")
-  
-  geom_sf(data = SwissAsianMissionsLocationsGeo, color="red") +
+  geom_sf(data = SwissAsianMissionsLocationsGeo, color="Black") +
   geom_text_repel(data = SwissAsianMissionsLocationsGeo, aes(x = lng, y = lat, label = city_ascii), 
         fontface = "bold", nudge_x = c(1, -1.5, 2, 2, -1), nudge_y = c(0.25, 
-            -0.25, 0.5, 0.5, -0.5)) 
+            -0.25, 0.5, 0.5, -0.5)) +
+  coord_sf(
+  xlim = window_coord_sf[, "X"],
+  ylim = window_coord_sf[, "Y"],
+  expand = FALSE
+  ) +
+  theme_minimal() +
+  theme(plot.title = element_text(face = "bold"),
+        axis.text.x = element_blank()) +
+  labs(title = "Asia Pacific",
+       subtitle = "Swiss Representations",
+       x = NULL, y = NULL,
+       caption = "BCN")
 ```
  +
 #  coord_sf(
