@@ -122,9 +122,7 @@ SwissAsianMissionsLocationsGeo <- st_as_sf(SwissAsianMissionsLocations,
 
 ```
 
-Converting the data frame to a `sf` object allows to rely on `sf` to handle on the fly the coordinate system (both projection and extent), which can be very useful if the two objects (here world map, and sites) are not in the same projection. 
-
-To achieve the same result, the projection (here WGS84, which is the CRS code #4326) has to be a priori defined in the `sf` object:
+## Swiss embassies
 
 ```{r layers-final-plot0 fig.width = 15, out.width = "75%"}
 library("ggrepel")
@@ -174,22 +172,84 @@ world %>%
 
 ```
 
- +
-#  coord_sf(
-#    xlim = window_coord_sf[, "X"],
-#    ylim = window_coord_sf[, "Y"],
-#    expand = FALSE
-#  ) +
-  theme_minimal() +
-  theme(plot.title = element_text(face = "bold"),
-        axis.text.x = element_blank()) +
-  labs(title = "Asia Pacific",
-       subtitle = "Swiss Representations",
-       x = NULL, y = NULL,
-       caption = "BCN")
+## Swiss accreditations without missions
 
-```{r layers-final-plot1,  fig.width = 15, out.width = "75%"}
+
+```{r SetupData2}
+
+# Read and Join Swiss Missions Data --------------------------------------------
+
+# Read Swiss Missions Data and Filter Them
+
+SwissAsianMissionsData <- read_excel("SwissMissionsInAsiaData-2024-06-06-c.xlsx", na = "NA") %>%
+filter(APacRegion == "VRAI") 
+
+SwissAsianEmbassies <- SwissAsianMissionsData %>%
+  filter(iso_a3_eh == Pays_Ambassade)
+
+SwissAsianRepresentations <- SwissAsianMissionsData
+
+MapCountriesWithSwissEmbassy <- world %>%
+  select(geometry, name, "iso_a3_eh") %>%
+  left_join(SwissAsianEmbassies, by = "iso_a3_eh") %>%
+  filter(APacRegion != "TRUE")
+
+MapCountriesWithSwissRepresentation <- world %>%
+  select(geometry, name, "iso_a3_eh") %>%
+  left_join(SwissAsianRepresentations, by = "iso_a3_eh") %>%
+  filter(APacRegion != "TRUE")
+
+# Read city coordinates
+
+CityDB <- read_excel("worldcities-2024-06-06.xlsx") %>%
+  select(city_ascii,'iso_a3_eh', 'lat', 'lng') %>%
+  mutate()
+
+# corriger les différences de dénomination
+
+CityDB$city_ascii <- str_replace(CityDB$city_ascii, "Rangoon", "Yangon")
+
+CityDB$ISO_country <- CityDB$iso_a3_eh
+
+# Create a SwissAsianMissionsLocations by selecting the city  ------------------
+# from SwissAsianMissionsData and joining the dataset with the cityDB
+
+# Create a Subset of the SwissAsianMissionsData with the locations
+
+SwissAsianMissionsCities <- SwissAsianMissionsData %>%
+  select('city_ascii', 'iso_a3_eh', 'APacRegion', 'Pays_Ambassade') %>%
+  filter(city_ascii != "NA") 
+
+# Join data sets
+
+SwissAsianMissionsLocations <- CityDB %>%
+  select('city_ascii', 'ISO_country', 'lat', 'lng') %>%
+  right_join(SwissAsianMissionsCities, by = 'city_ascii') %>%
+  filter(ISO_country == iso_a3_eh)
+
+# Cordinates for the city
+SwissAsianMissionsLocationsGeo <- st_as_sf(SwissAsianMissionsLocations, 
+    coords = c("lng", "lat"), remove = FALSE,
+    crs = target_crs, agr = "constant")
+```
+
+```{r layers-final-plot1 fig.width = 15, out.width = "75%"}
+
 library("ggrepel")
+
+## ----Create bounding box-------------------------
+# Choose manually the region to plot with Open Street Map
+# https://www.openstreetmap.org/export
+window_coord <- st_sfc(
+  st_point(c(60, -10)), #left, bottom
+  st_point(c(149, 55)), #right, top
+  crs = target_crs #the EPSG identifier of WGS84 (used in GPS)
+)
+
+window_coord_sf <- window_coord %>%
+  st_transform(crs = target_crs) %>%
+  st_coordinates() # retrieve coordinates
+
 
 cols <- c("none" = "grey", "TRUE" = "darkblue", "FALSE" = "lightblue")
 world %>%
@@ -198,15 +258,19 @@ world %>%
   ggplot() +
   geom_sf(color = "white") +
   geom_sf(data = MapCountriesWithSwissEmbassy, aes(fill = APacRegion), color="white") +
-  geom_sf(data = SwissAsianMissionsLocationsGeo, color="red") +
-  geom_text_repel(data = SwissAsianMissionsLocationsGeo, aes(x = lng, y = lat, label = city_ascii), 
-        fontface = "bold", nudge_x = c(1, -1.5, 2, 2, -1), nudge_y = c(0.25, 
-            -0.25, 0.5, 0.5, -0.5)) +
+  geom_sf(data = SwissAsianMissionsLocationsGeo, color="Black") +
+#  geom_text_repel(data = SwissAsianMissionsLocationsGeo, size=2,
+#      aes(x = lng, y = lat, label = city_ascii), 
+#       fontface = "italic", nudge_x = c(1, -1.5, 2, 2, -1), nudge_y = c(0.25, 
+#        -0.25, 0.5, 0.5, -0.5)) +
+  geom_text_repel(data = SwissAsianMissionsLocationsGeo, size=2,
+      aes(x = lng, y = lat, label = city_ascii), 
+       fontface = "italic", nudge_x = 3, nudge_y = 3) +
   coord_sf(
-    xlim = window_coord_sf[, "X"],
-    ylim = window_coord_sf[, "Y"],
-    expand = FALSE,
-    datum = NA # no graticule
+  xlim = window_coord_sf[, "X"],
+  ylim = window_coord_sf[, "Y"],
+  expand = FALSE,
+  datum=NA
   ) +
   theme_minimal() +
   theme(plot.title = element_text(face = "bold"),
@@ -214,62 +278,36 @@ world %>%
   labs(title = "Asia Pacific",
        subtitle = "Swiss Representations",
        x = NULL, y = NULL,
-       caption = "BCN") 
-```
+       caption = "BCN")
 
 
-```{r cities-plot-nudge}
-library("ggrepel")
-ggplot(data = world) +
-    geom_sf() +
-    geom_sf(data = counties, fill = NA, color = gray(.5)) +
-    geom_sf(data = flcities) +
-    geom_text_repel(data = flcities, aes(x = lng, y = lat, label = city), 
-        fontface = "bold", nudge_x = c(1, -1.5, 2, 2, -1), nudge_y = c(0.25, 
-            -0.25, 0.5, 0.5, -0.5)) +
-    coord_sf(xlim = c(-88, -78), ylim = c(24.5, 33), expand = FALSE)
-```
-
-
-
-```{r layers-final-plot, fig.width = 15, out.width = "75%"}
-  
-library("ggrepel")
-ggplot(data = world) +
-    geom_sf() +
-    geom_sf(data = SwissAsianMissionsDataGeo, fill = APacRegion != "FALSE", color = gray(.5)) +
-    geom_sf(data = flcities) +
-    geom_text_repel(data = flcities, aes(x = lng, y = lat, label = city), 
-        fontface = "bold", nudge_x = c(1, -1.5, 2, 2, -1), nudge_y = c(0.25, 
-            -0.25, 0.5, 0.5, -0.5)) +
-    coord_sf(xlim = c(-88, -78), ylim = c(24.5, 33), expand = FALSE)
-
-```
-  
-
-
+cols <- c("none" = "grey", "TRUE" = "darkblue", "FALSE" = "lightblue")
+world %>%
+  filter(admin != "Antarctica") %>%
+  st_transform(crs = target_crs) %>%
+  ggplot() +
+  geom_sf(color = "white") +
+  geom_sf(data = MapCountriesWithSwissRepresentation, aes(fill = Pays_Ambassade), color="white") +
+  geom_sf(data = SwissAsianMissionsLocationsGeo, color="Black") +
+#  geom_text_repel(data = SwissAsianMissionsLocationsGeo, size=2,
+#      aes(x = lng, y = lat, label = city_ascii), 
+#       fontface = "italic", nudge_x = c(1, -1.5, 2, 2, -1), nudge_y = c(0.25, 
+#        -0.25, 0.5, 0.5, -0.5)) +
+  geom_text_repel(data = SwissAsianMissionsLocationsGeo, size=2,
+      aes(x = lng, y = lat, label = city_ascii), 
+       fontface = "italic", nudge_x = 3, nudge_y = 3) +
   coord_sf(
-    xlim = window_coord_sf[, "X"],
-    ylim = window_coord_sf[, "Y"],
-    expand = FALSE
-  )
-  
-  
-    ggrepel::geom_label_repel(
-    data = SwissMissionsDataGeo,
-    aes(label = name.x, geometry = geometry),
-    stat = "sf_coordinates",
-    min.segment.length = 10,
-    max.overlap = Inf
-  )  
-+
-  scale_fill_manual(values = cols) +
+  xlim = window_coord_sf[, "X"],
+  ylim = window_coord_sf[, "Y"],
+  expand = FALSE,
+  datum=NA
+  ) +
   theme_minimal() +
   theme(plot.title = element_text(face = "bold"),
         axis.text.x = element_blank()) +
-  labs(title = "Business Data",
-       subtitle = "Interests",
+  labs(title = "Asia Pacific",
+       subtitle = "Swiss Representations and Accreditated States",
        x = NULL, y = NULL,
-       caption = "SICPA")
+       caption = "BCN")
 
-
+```
