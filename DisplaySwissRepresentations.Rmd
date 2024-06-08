@@ -79,22 +79,25 @@ target_crs <- 4326
 # Read Swiss Missions Data and Filter Them
 
 SwissAsianMissionsData <- read_excel("SwissMissionsInAsiaData-2024-06-06-c.xlsx", na = "NA") %>%
-  filter(APacRegion != "FALSE")  %>%
+  filter(APacRegion == "VRAI")  %>%
   filter(iso_a3_eh == Pays_Ambassade)
 
 MapCountriesWithSwissEmbassy <- world %>%
   select(geometry, name, "iso_a3_eh") %>%
   left_join(SwissAsianMissionsData, by = "iso_a3_eh") %>%
-  filter(APacRegion != "FALSE")
+  filter(APacRegion != "TRUE")
 
 # Read city coordinates
 
 CityDB <- read_excel("worldcities-2024-06-06.xlsx") %>%
-  select(city_ascii,'iso_a3_eh', 'lat', 'lng')
+  select(city_ascii,'iso_a3_eh', 'lat', 'lng') %>%
+  mutate()
 
 # corriger les différences de dénomination
 
 CityDB$city_ascii <- str_replace(CityDB$city_ascii, "Rangoon", "Yangon")
+
+CityDB$ISO_country <- CityDB$iso_a3_eh
 
 # Create a SwissAsianMissionsLocations by selecting the city  ------------------
 # from SwissAsianMissionsData and joining the dataset with the cityDB
@@ -102,17 +105,19 @@ CityDB$city_ascii <- str_replace(CityDB$city_ascii, "Rangoon", "Yangon")
 # Create a Subset of the SwissAsianMissionsData with the locations
 
 SwissAsianMissionsCities <- SwissAsianMissionsData %>%
-  select('city_ascii', 'iso_a3_eh', 'APacRegion') %>%
+  select('city_ascii', 'iso_a3_eh', 'APacRegion', 'Pays_Ambassade') %>%
   filter(city_ascii != "NA") 
 
 # Join data sets
 
 SwissAsianMissionsLocations <- CityDB %>%
-  select('city_ascii', 'lat', 'lng') %>%
-  right_join(SwissAsianMissionsCities, by = 'city_ascii')
+  select('city_ascii', 'ISO_country', 'lat', 'lng') %>%
+  right_join(SwissAsianMissionsCities, by = 'city_ascii') %>%
+  filter(ISO_country == iso_a3_eh)
 
 # Cordinates for the city
-SwissAsianMissionsLocationsGeo <- st_as_sf(SwissAsianMissionsLocations, coords = c("lng", "lat"), remove = FALSE,
+SwissAsianMissionsLocationsGeo <- st_as_sf(SwissAsianMissionsLocations, 
+    coords = c("lng", "lat"), remove = FALSE,
     crs = target_crs, agr = "constant")
 
 ```
@@ -146,13 +151,18 @@ world %>%
   geom_sf(color = "white") +
   geom_sf(data = MapCountriesWithSwissEmbassy, aes(fill = APacRegion), color="white") +
   geom_sf(data = SwissAsianMissionsLocationsGeo, color="Black") +
-  geom_text_repel(data = SwissAsianMissionsLocationsGeo, aes(x = lng, y = lat, label = city_ascii), 
-       fontface = "bold", nudge_x = c(1, -1.5, 2, 2, -1), nudge_y = c(0.25, 
-        -0.25, 0.5, 0.5, -0.5)) +
+#  geom_text_repel(data = SwissAsianMissionsLocationsGeo, size=2,
+#      aes(x = lng, y = lat, label = city_ascii), 
+#       fontface = "italic", nudge_x = c(1, -1.5, 2, 2, -1), nudge_y = c(0.25, 
+#        -0.25, 0.5, 0.5, -0.5)) +
+  geom_text_repel(data = SwissAsianMissionsLocationsGeo, size=2,
+      aes(x = lng, y = lat, label = city_ascii), 
+       fontface = "italic", nudge_x = 3, nudge_y = 3) +
   coord_sf(
   xlim = window_coord_sf[, "X"],
   ylim = window_coord_sf[, "Y"],
-  expand = FALSE
+  expand = FALSE,
+  datum=NA
   ) +
   theme_minimal() +
   theme(plot.title = element_text(face = "bold"),
