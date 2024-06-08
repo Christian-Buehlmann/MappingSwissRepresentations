@@ -47,10 +47,13 @@ library("dplyr")
 ```{r further_options, include = FALSE}
 
 install.packages(c("cowplot", "googleway", "ggplot2", "ggrepel",  "dplyr", 
-    "ggspatial", "lwgeom", "rnaturalearth", "sf", "rnaturalearthdata"))
+    "ggspatial", "lwgeom", "rnaturalearth", "sf", "rnaturalearthdata", "viridis"))
 
 install.packages("tidyverse")
 
+```
+
+```{r further_options2, include = FALSE}
 library("ggplot2")
 theme_set(theme_bw())
 library("sf")
@@ -59,6 +62,7 @@ library("rnaturalearthdata")
 library("rnaturalearthdata")
 
 library(readxl)
+library(viridis)
 library(dplyr)    # To assist with cleaning and organizing data
 library(tidyverse)  
 
@@ -187,6 +191,9 @@ filter(APacRegion == "VRAI")
 SwissAsianEmbassies <- SwissAsianMissionsData %>%
   filter(iso_a3_eh == Pays_Ambassade)
 
+SwissAsianDA <- SwissAsianMissionsData %>%
+  filter(AD_accrédité != FALSE")
+
 SwissAsianRepresentations <- SwissAsianMissionsData
 
 MapCountriesWithSwissEmbassy <- world %>%
@@ -195,6 +202,12 @@ MapCountriesWithSwissEmbassy <- world %>%
   filter(APacRegion != "TRUE")
 
 MapCountriesWithSwissRepresentation <- world %>%
+  select(geometry, name, "iso_a3_eh") %>%
+  left_join(SwissAsianRepresentations, by = "iso_a3_eh") %>%
+  filter(APacRegion != "TRUE")
+
+
+MapCountriesWithSwissDA <- world %>%
   select(geometry, name, "iso_a3_eh") %>%
   left_join(SwissAsianRepresentations, by = "iso_a3_eh") %>%
   filter(APacRegion != "TRUE")
@@ -219,6 +232,12 @@ CityDB$ISO_country <- CityDB$iso_a3_eh
 SwissAsianMissionsCities <- SwissAsianMissionsData %>%
   select('city_ascii', 'iso_a3_eh', 'APacRegion', 'Pays_Ambassade') %>%
   filter(city_ascii != "NA") 
+
+
+SwissAsianDACities <- SwissAsianMissionsData %>%
+  select('city_ascii', 'iso_a3_eh', 'APacRegion', 'Pays_Ambassade') %>%
+  filter(city_ascii != "NA") 
+
 
 # Join data sets
 
@@ -307,6 +326,32 @@ world %>%
         axis.text.x = element_blank()) +
   labs(title = "Asia Pacific",
        subtitle = "Swiss Representations and Accreditated States",
+       x = NULL, y = NULL,
+       caption = "BCN")
+
+
+cols <- c("none" = "grey", "TRUE" = "darkblue", "FALSE" = "lightblue")
+world %>%
+  filter(admin != "Antarctica") %>%
+  st_transform(crs = target_crs) %>%
+  ggplot() +
+  geom_sf(color = "white") +
+  geom_sf(data = MapCountriesWithSwissRepresentation, aes(fill = Pays_Ambassade), color="white") +
+  geom_sf(data = SwissAsianMissionsLocationsGeo, color="Black") +
+  geom_text_repel(data = SwissAsianMissionsLocationsGeo, size=2,
+      aes(x = lng, y = lat, label = city_ascii), 
+       fontface = "italic", nudge_x = 3, nudge_y = 3) +
+  coord_sf(
+  xlim = window_coord_sf[, "X"],
+  ylim = window_coord_sf[, "Y"],
+  expand = FALSE,
+  datum=NA
+  ) +
+  theme_minimal() +
+  theme(plot.title = element_text(face = "bold"),
+        axis.text.x = element_blank()) +
+  labs(title = "Asia Pacific",
+       subtitle = "Swiss DA and Accreditated States",
        x = NULL, y = NULL,
        caption = "BCN")
 
