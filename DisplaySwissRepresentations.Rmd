@@ -47,9 +47,7 @@ library("dplyr")
 ```{r further_options, include = FALSE}
 
 install.packages(c("cowplot", "googleway", "ggplot2", "ggrepel",  "dplyr", 
-    "ggspatial", "lwgeom", "rnaturalearth", "sf", "rnaturalearthdata", "viridis"))
-
-install.packages("tidyverse")
+    "ggspatial", "lwgeom", "rnaturalearth", "sf", "rnaturalearthdata", "viridis", "maps","tidyverse"))
 
 ```
 
@@ -65,6 +63,9 @@ library(readxl)
 library(viridis)
 library(dplyr)    # To assist with cleaning and organizing data
 library(tidyverse)  
+library(maps)  
+library(tools)  
+
 
 ```
 
@@ -191,8 +192,8 @@ filter(APacRegion == "VRAI")
 SwissAsianEmbassies <- SwissAsianMissionsData %>%
   filter(iso_a3_eh == Pays_Ambassade)
 
-SwissAsianDA <- SwissAsianMissionsData %>%
-  filter(AD_accrédité != FALSE")
+SwissDAInAPac <- SwissAsianMissionsData %>%
+  filter(AD_accrédité == "VRAI")
 
 SwissAsianRepresentations <- SwissAsianMissionsData
 
@@ -205,7 +206,6 @@ MapCountriesWithSwissRepresentation <- world %>%
   select(geometry, name, "iso_a3_eh") %>%
   left_join(SwissAsianRepresentations, by = "iso_a3_eh") %>%
   filter(APacRegion != "TRUE")
-
 
 MapCountriesWithSwissDA <- world %>%
   select(geometry, name, "iso_a3_eh") %>%
@@ -229,14 +229,14 @@ CityDB$ISO_country <- CityDB$iso_a3_eh
 
 # Create a Subset of the SwissAsianMissionsData with the locations
 
-SwissAsianMissionsCities <- SwissAsianMissionsData %>%
-  select('city_ascii', 'iso_a3_eh', 'APacRegion', 'Pays_Ambassade') %>%
-  filter(city_ascii != "NA") 
+SwissAsianDACities <- SwissAsianMissionsData %>%
+  select('city_ascii', 'iso_a3_eh', 'APacRegion', 'Pays_Ambassade')
 
 
 SwissAsianDACities <- SwissAsianMissionsData %>%
-  select('city_ascii', 'iso_a3_eh', 'APacRegion', 'Pays_Ambassade') %>%
-  filter(city_ascii != "NA") 
+  select('city_ascii', 'iso_a3_eh', 'APacRegion', 'Pays_Ambassade', 'AD_origine', 'AD_inland') %>%
+  filter(city_ascii != "NA")  %>%
+  filter(AD_inland == "VRAI") 
 
 
 # Join data sets
@@ -246,8 +246,21 @@ SwissAsianMissionsLocations <- CityDB %>%
   right_join(SwissAsianMissionsCities, by = 'city_ascii') %>%
   filter(ISO_country == iso_a3_eh)
 
-# Cordinates for the city
+
+SwissAsianDALocations <- CityDB %>%
+  select('city_ascii', 'ISO_country', 'lat', 'lng') %>%
+  right_join(SwissAsianDACities, by = 'city_ascii') %>%
+  filter(ISO_country == iso_a3_eh)
+
+
+# Cordinates for the city ------------------------------------------------------$
+# Missions Locations
 SwissAsianMissionsLocationsGeo <- st_as_sf(SwissAsianMissionsLocations, 
+    coords = c("lng", "lat"), remove = FALSE,
+    crs = target_crs, agr = "constant")
+
+# DA Locations
+SwissAsianDALocationsGeo <- st_as_sf(SwissAsianDALocations, 
     coords = c("lng", "lat"), remove = FALSE,
     crs = target_crs, agr = "constant")
 ```
@@ -269,6 +282,7 @@ window_coord_sf <- window_coord %>%
   st_transform(crs = target_crs) %>%
   st_coordinates() # retrieve coordinates
 
+# Missions Locations -----------------------------------------------------------
 
 cols <- c("none" = "grey", "TRUE" = "darkblue", "FALSE" = "lightblue")
 world %>%
@@ -299,6 +313,7 @@ world %>%
        x = NULL, y = NULL,
        caption = "BCN")
 
+# Diplomatic accreditations ----------------------------------------------------
 
 cols <- c("none" = "grey", "TRUE" = "darkblue", "FALSE" = "lightblue")
 world %>%
@@ -329,6 +344,9 @@ world %>%
        x = NULL, y = NULL,
        caption = "BCN")
 
+# DA accreditations ------------------------------------------------------------
+
+MapCountriesWithSwissDA <- cbind(MapCountriesWithSwissDA, st_coordinates(st_centroid(MapCountriesWithSwissDA)))
 
 cols <- c("none" = "grey", "TRUE" = "darkblue", "FALSE" = "lightblue")
 world %>%
@@ -336,11 +354,14 @@ world %>%
   st_transform(crs = target_crs) %>%
   ggplot() +
   geom_sf(color = "white") +
-  geom_sf(data = MapCountriesWithSwissRepresentation, aes(fill = Pays_Ambassade), color="white") +
-  geom_sf(data = SwissAsianMissionsLocationsGeo, color="Black") +
-  geom_text_repel(data = SwissAsianMissionsLocationsGeo, size=2,
+  geom_sf(data = MapCountriesWithSwissDA, aes(fill = AD_origine), color ="white") +
+  # geom_label(data = MapCountriesWithSwissDA, aes(X, Y, label = ID), size = 5, fontface = "bold", 
+  #      nudge_y = MapCountriesWithSwissDA$nudge_y) +
+  geom_text(data = MapCountriesWithSwissDA, aes(X, Y, label = name.x), size = 2, fontface = "italic") +
+  geom_sf(data = SwissAsianDALocationsGeo, shape=18, color="Black", size = 2, fontface = "bold",) +
+  geom_label_repel(data = SwissAsianDALocationsGeo, size=2,
       aes(x = lng, y = lat, label = city_ascii), 
-       fontface = "italic", nudge_x = 3, nudge_y = 3) +
+       fontface = "plain", nudge_x = 3, nudge_y = 3) +
   coord_sf(
   xlim = window_coord_sf[, "X"],
   ylim = window_coord_sf[, "Y"],
