@@ -1,0 +1,94 @@
+---
+title: "WebScrapping"
+output: html_notebook
+---
+
+
+```{r}
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+install.packages(c("cowplot", "googleway", "ggplot2", "ggrepel",  "dplyr", 
+    "ggspatial", "lwgeom", "rnaturalearth", "sf", "rnaturalearthdata", "viridis", "maps","tidyverse", "egg", "rvest"))
+
+library("ggplot2")
+library("sf")
+library("rnaturalearth")
+library("rnaturalearthdata")
+library("ggspatial")
+library("maps")
+library("tools")
+library("googleway")
+library("ggrepel")
+
+library("rnaturalearth")
+library("rnaturalearthdata")
+
+library("readxl")
+library("dplyr")
+
+library(readxl)
+library(viridis)
+library(dplyr)    # To assist with cleaning and organizing data
+library(tidyverse)  
+library(maps)  
+library(tools)
+library(egg)
+library(rvest)
+
+
+```
+
+```{r}
+url <- "https://rvest.tidyverse.org/articles/starwars.html"
+html <- read_html(url)
+html
+
+section <- html |> html_elements("section")
+section
+
+section |> html_element("h2") |> html_text2()
+section |> html_element(".director") |> html_text2()
+
+tibble(
+  title = section |> 
+    html_element("h2") |> 
+    html_text2(),
+  released = section |> 
+    html_element("p") |> 
+    html_text2() |> 
+    str_remove("Released: ") |> 
+    parse_date(),
+  director = section |> 
+    html_element(".director") |> 
+    html_text2(),
+  intro = section |> 
+    html_element(".crawl") |> 
+    html_text2()
+)
+
+url <- "https://www.eda.admin.ch/eda/fr/dfae/representations-et-conseils-pour-les-voyages/afrique-sud/ch-representation-afrique-sud.html"
+html <- read_html(url)
+
+url <- "https://www.eda.admin.ch/pretoria"
+html <- read_html(url)
+
+
+table <- html |> 
+  html_element("class") 
+
+summaries_css <- html %>%
+  html_elements(css = "ul.contact-entry")
+
+head(summaries_css)
+
+title <- summaries_css %>% 
+  html_element("li") %>% 
+  html_text2()
+title
+
+
+```
+
